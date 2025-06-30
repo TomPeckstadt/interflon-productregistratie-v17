@@ -3192,98 +3192,134 @@ ${new Date().toLocaleString("nl-NL")}
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        {products
-                          .filter((product) => product.name.toLowerCase().includes(productSearchFilter.toLowerCase()))
-                          .map((product) => (
-                            <div
-                              key={product.id}
-                              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
-                            >
-                              <div className="flex-1">
-                                <div className="font-medium">{product.name}</div>
-                                <div className="text-sm text-gray-600">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Naam</TableHead>
+                            <TableHead>Categorie</TableHead>
+                            <TableHead>QR Code</TableHead>
+                            <TableHead>Bijlage</TableHead>
+                            <TableHead className="text-right">Acties</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {products
+                            .filter((product) => {
+                              if (!productSearchFilter) return true
+                              const searchLower = productSearchFilter.toLowerCase()
+                              const categoryName = product.categoryId
+                                ? categories.find((c) => c.id === product.categoryId)?.name || ""
+                                : ""
+
+                              return (
+                                product.name.toLowerCase().includes(searchLower) ||
+                                (product.qrcode && product.qrcode.toLowerCase().includes(searchLower)) ||
+                                categoryName.toLowerCase().includes(searchLower)
+                              )
+                            })
+                            .map((product) => (
+                              <TableRow key={product.id}>
+                                <TableCell className="font-medium">{product.name}</TableCell>
+                                <TableCell>
                                   {product.categoryId
                                     ? categories.find((c) => c.id === product.categoryId)?.name || "Onbekende categorie"
                                     : "Geen categorie"}
-                                </div>
-                                {product.qrcode && (
-                                  <div className="text-xs text-gray-500 font-mono mt-1">QR: {product.qrcode}</div>
-                                )}
-                                {product.attachmentUrl && (
-                                  <div className="text-xs text-blue-600 mt-1">
-                                    📎 {product.attachmentName || "Bijlage"}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {product.qrcode ? (
+                                      <>
+                                        <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                                          {product.qrcode}
+                                        </span>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => printQRCode(product)}
+                                          className="text-xs bg-green-50 text-green-600 border-green-200 hover:bg-green-100 h-6 px-2"
+                                        >
+                                          <Printer className="h-3 w-3 mr-1" />
+                                          Print
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => generateQRCode(product)}
+                                        className="text-xs"
+                                      >
+                                        📱 Genereer QR
+                                      </Button>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {!product.qrcode && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => generateQRCode(product)}
-                                    className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
-                                  >
-                                    <QrCode className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                {product.qrcode && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => printQRCode(product)}
-                                    className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
-                                  >
-                                    <Printer className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                <div>
-                                  <input
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={(e) => handleAttachmentUpload(product, e)}
-                                    className="hidden"
-                                    id={`attachment-${product.id}`}
-                                  />
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => document.getElementById(`attachment-${product.id}`)?.click()}
-                                    className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                                  >
-                                    📎
-                                  </Button>
-                                </div>
-                                {product.attachmentUrl && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRemoveAttachment(product)}
-                                    className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                                  >
-                                    🗑️
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditProduct(product)}
-                                  className="bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => removeProduct(product)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {product.attachmentUrl ? (
+                                      <div className="flex items-center gap-2">
+                                        <a
+                                          href={product.attachmentUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-600 hover:text-blue-800 text-sm"
+                                        >
+                                          📎 {product.attachmentName || "Bijlage"}
+                                        </a>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleRemoveAttachment(product)}
+                                          className="text-red-600 hover:text-red-800 p-1"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <input
+                                          type="file"
+                                          accept=".pdf"
+                                          onChange={(e) => handleAttachmentUpload(product, e)}
+                                          className="hidden"
+                                          id={`file-${product.id}`}
+                                        />
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => document.getElementById(`file-${product.id}`)?.click()}
+                                          className="text-xs"
+                                        >
+                                          📎 PDF toevoegen
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => handleEditProduct(product)}
+                                      className="bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      onClick={() => removeProduct(product)}
+                                      className="bg-red-500 hover:bg-red-600"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   </CardContent>
                 </Card>
