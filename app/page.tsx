@@ -53,7 +53,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Trash2, Search, X, QrCode, ChevronDown, Edit, Printer, LogOut, Lock, Mail } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
@@ -3528,63 +3527,80 @@ ${new Date().toLocaleString("nl-NL")}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">🏆 Top Gebruikers</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              {getTopUsers().map(([user, count], index) => (
-                                <div key={user} className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <div className="text-lg">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</div>
-                                    <span className="font-medium">{user}</span>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+                        <div className="bg-white p-4 rounded-lg shadow border">
+                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🏆 Top Gebruikers</h3>
+                          <div className="space-y-2">
+                            {getTopUsers().map(([user, count]) => (
+                              <div key={user} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
+                                    🥇
                                   </div>
-                                  <span className="text-sm bg-gray-100 px-2 py-1 rounded">{count}</span>
+                                  <span className="text-sm font-medium">{user}</span>
                                 </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
+                                <span className="text-sm text-gray-600">{count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
 
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">📦 Top Producten</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              {getTopProducts().map(([product, count], index) => (
-                                <div key={product} className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <div className="text-lg">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</div>
-                                    <span className="font-medium text-sm">{product}</span>
+                        <div className="bg-white p-4 rounded-lg shadow border">
+                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📦 Top Producten</h3>
+                          <div className="space-y-2">
+                            {getTopProducts().map(([product, count]) => (
+                              <div key={product} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs font-medium text-green-600">
+                                    🥇
                                   </div>
-                                  <span className="text-sm bg-gray-100 px-2 py-1 rounded">{count}</span>
+                                  <span className="text-sm font-medium truncate">{product}</span>
                                 </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
+                                <span className="text-sm text-gray-600">{count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
 
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">📍 Top Locaties</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              {getTopLocations().map(([location, count], index) => (
-                                <div key={location} className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <div className="text-lg">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</div>
-                                    <span className="font-medium text-sm">{location}</span>
+                        <div className="bg-white p-4 rounded-lg shadow border">
+                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📍 Top Locaties</h3>
+                          <div className="space-y-2">
+                            {getTopLocations().map(([location, count]) => (
+                              <div key={location} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">
+                                    🥇
                                   </div>
-                                  <span className="text-sm bg-gray-100 px-2 py-1 rounded">{count}</span>
+                                  <span className="text-sm font-medium truncate">{location}</span>
                                 </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
+                                <span className="text-sm text-gray-600">{count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="bg-white p-4 rounded-lg shadow border">
+                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📊 Top 5 Producten</h3>
+                          <div className="space-y-3">
+                            {getProductChartData().map((item, index) => (
+                              <div key={item.product} className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="font-medium truncate flex-1 mr-2">{item.product}</span>
+                                  <span className="text-gray-600 font-medium">{item.count}</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full transition-all duration-300"
+                                    style={{
+                                      backgroundColor: item.color,
+                                      width: `${(item.count / Math.max(...getProductChartData().map((d) => d.count))) * 100}%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -3593,225 +3609,6 @@ ${new Date().toLocaleString("nl-NL")}
             </>
           )}
         </Tabs>
-
-        {/* QR Scanner Modal */}
-        {showQrScanner && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">📱 QR Code Scanner</h3>
-                <Button variant="outline" size="sm" onClick={stopQrScanner}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl mb-4">📱</div>
-                <p className="text-gray-600 mb-4">Richt je camera op de QR code</p>
-                <div className="bg-gray-100 p-4 rounded-lg mb-4">
-                  <p className="text-sm text-gray-600">
-                    QR Scanner is momenteel een placeholder. In een echte implementatie zou hier een camera interface
-                    komen.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Of voer QR code handmatig in"
-                    value={qrScanResult}
-                    onChange={(e) => setQrScanResult(e.target.value)}
-                  />
-                  <Button
-                    onClick={() => handleQrCodeDetected(qrScanResult)}
-                    disabled={!qrScanResult.trim()}
-                    className="w-full"
-                  >
-                    QR Code Gebruiken
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Edit Product Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Product Bewerken</DialogTitle>
-              <DialogDescription>Wijzig de productgegevens</DialogDescription>
-            </DialogHeader>
-            {editingProduct && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Product Naam</Label>
-                  <Input
-                    value={editingProduct.name}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>QR Code</Label>
-                  <Input
-                    value={editingProduct.qrcode || ""}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, qrcode: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Categorie</Label>
-                  <Select
-                    value={editingProduct.categoryId || "none"}
-                    onValueChange={(value) =>
-                      setEditingProduct({ ...editingProduct, categoryId: value === "none" ? undefined : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Geen categorie</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleSaveProduct} className="flex-1">
-                    Opslaan
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-                    Annuleren
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Category Dialog */}
-        <Dialog open={showEditCategoryDialog} onOpenChange={setShowEditCategoryDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Categorie Bewerken</DialogTitle>
-              <DialogDescription>Wijzig de categorienaam</DialogDescription>
-            </DialogHeader>
-            {editingCategory && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Categorie Naam</Label>
-                  <Input
-                    value={editingCategory.name}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleSaveCategory} className="flex-1">
-                    Opslaan
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowEditCategoryDialog(false)}>
-                    Annuleren
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit User Dialog */}
-        <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Gebruiker Bewerken</DialogTitle>
-              <DialogDescription>Wijzig gebruikersgegevens en badge koppeling</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Gebruikersnaam</Label>
-                <Input value={editingUser} onChange={(e) => setEditingUser(e.target.value)} />
-              </div>
-              <div>
-                <Label>Rol</Label>
-                <Select value={editingUserRole} onValueChange={setEditingUserRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Badge Code</Label>
-                <Input
-                  value={editingUserBadgeCode}
-                  onChange={(e) => setEditingUserBadgeCode(e.target.value)}
-                  placeholder="Badge ID (optioneel)"
-                />
-                <div className="text-xs text-gray-600 mt-1">
-                  Laat leeg om badge koppeling te verwijderen. Badge wordt gebruikt voor snelle login.
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSaveUser} className="flex-1" disabled={isLoading}>
-                  {isLoading ? "Bezig met opslaan..." : "Opslaan"}
-                </Button>
-                <Button variant="outline" onClick={() => setShowEditUserDialog(false)}>
-                  Annuleren
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Location Dialog */}
-        <Dialog open={showEditLocationDialog} onOpenChange={setShowEditLocationDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Locatie Bewerken</DialogTitle>
-              <DialogDescription>Wijzig de locatienaam</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Locatie Naam</Label>
-                <Input value={editingLocation} onChange={(e) => setEditingLocation(e.target.value)} />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSaveLocation} className="flex-1">
-                  Opslaan
-                </Button>
-                <Button variant="outline" onClick={() => setShowEditLocationDialog(false)}>
-                  Annuleren
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Purpose Dialog */}
-        <Dialog open={showEditPurposeDialog} onOpenChange={setShowEditPurposeDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Doel Bewerken</DialogTitle>
-              <DialogDescription>Wijzig de doelnaam</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Doel Naam</Label>
-                <Input value={editingPurpose} onChange={(e) => setEditingPurpose(e.target.value)} />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSavePurpose} className="flex-1">
-                  Opslaan
-                </Button>
-                <Button variant="outline" onClick={() => setShowEditPurposeDialog(false)}>
-                  Annuleren
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   )
