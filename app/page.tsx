@@ -53,7 +53,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Trash2, Search, X, QrCode, ChevronDown, Edit, Printer, LogOut, Lock, Mail } from "lucide-react"
+import { Plus, Trash2, Search, X, QrCode, ChevronDown, Edit, LogOut, Lock, Mail } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
 interface Product {
@@ -133,7 +133,7 @@ export default function ProductRegistrationApp() {
   // Edit states
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [originalProduct, setOriginalProduct] = useState<Product | null>(null)
-  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showEditProductDialog, setShowEditProductDialog] = useState(false)
 
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [originalCategory, setOriginalCategory] = useState<Category | null>(null)
@@ -188,7 +188,7 @@ export default function ProductRegistrationApp() {
   const [badgeId, setBadgeId] = useState("")
   const [badgeError, setBadgeError] = useState("")
 
-  // CSV Import/Export functions - DEZE ZIJN NIEUW/AANGEPAST
+  // CSV Import/Export functions
   const handleImportUsersCSV = async (e: any) => {
     const file = e.target.files[0]
     if (!file) return
@@ -813,7 +813,9 @@ export default function ProductRegistrationApp() {
     setShowProductDropdown(false)
   }
 
+  // EDIT HANDLERS - FIXED VERSIONS
   const handleEditUser = (userName: string) => {
+    console.log("🔧 Starting user edit:", userName)
     const user = users.find((u) => u.name === userName)
     setEditingUser(userName)
     setEditingUserRole(user?.role || "user")
@@ -824,6 +826,35 @@ export default function ProductRegistrationApp() {
     setShowEditUserDialog(true)
   }
 
+  const handleEditProduct = (product: Product) => {
+    console.log("🔧 Starting product edit:", product)
+    setEditingProduct({ ...product })
+    setOriginalProduct({ ...product })
+    setShowEditProductDialog(true)
+  }
+
+  const handleEditCategory = (category: Category) => {
+    console.log("🔧 Starting category edit:", category)
+    setEditingCategory({ ...category })
+    setOriginalCategory({ ...category })
+    setShowEditCategoryDialog(true)
+  }
+
+  const handleEditLocation = (location: string) => {
+    console.log("🔧 Starting location edit:", location)
+    setEditingLocation(location)
+    setOriginalLocation(location)
+    setShowEditLocationDialog(true)
+  }
+
+  const handleEditPurpose = (purpose: string) => {
+    console.log("🔧 Starting purpose edit:", purpose)
+    setEditingPurpose(purpose)
+    setOriginalPurpose(purpose)
+    setShowEditPurposeDialog(true)
+  }
+
+  // SAVE HANDLERS - FIXED VERSIONS
   const handleSaveUser = async () => {
     if (!editingUser.trim()) {
       setImportError("Gebruikersnaam is verplicht")
@@ -907,12 +938,6 @@ export default function ProductRegistrationApp() {
     }
   }
 
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct({ ...product })
-    setOriginalProduct({ ...product })
-    setShowEditDialog(true)
-  }
-
   const handleSaveProduct = async () => {
     if (editingProduct && originalProduct) {
       const updateData = {
@@ -935,14 +960,8 @@ export default function ProductRegistrationApp() {
         setImportMessage("✅ Product aangepast!")
         setTimeout(() => setImportMessage(""), 2000)
       }
-      setShowEditDialog(false)
+      setShowEditProductDialog(false)
     }
-  }
-
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory({ ...category })
-    setOriginalCategory({ ...category })
-    setShowEditCategoryDialog(true)
   }
 
   const handleSaveCategory = async () => {
@@ -963,12 +982,6 @@ export default function ProductRegistrationApp() {
     }
   }
 
-  const handleEditLocation = (location: string) => {
-    setEditingLocation(location)
-    setOriginalLocation(location)
-    setShowEditLocationDialog(true)
-  }
-
   const handleSaveLocation = async () => {
     if (editingLocation.trim() && editingLocation.trim() !== originalLocation) {
       const result = await updateLocation(originalLocation, editingLocation.trim())
@@ -985,12 +998,6 @@ export default function ProductRegistrationApp() {
       }
       setShowEditLocationDialog(false)
     }
-  }
-
-  const handleEditPurpose = (purpose: string) => {
-    setEditingPurpose(purpose)
-    setOriginalPurpose(purpose)
-    setShowEditPurposeDialog(true)
   }
 
   const handleSavePurpose = async () => {
@@ -2859,7 +2866,7 @@ ${new Date().toLocaleString("nl-NL")}
                         <CardContent className="p-4">
                           <h3 className="text-lg font-semibold mb-4">🆕 Nieuwe Gebruiker Toevoegen</h3>
 
-                          {/* Import/Export Section - HIER ZIJN DE WIJZIGINGEN */}
+                          {/* Import/Export Section */}
                           <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <h4 className="text-md font-semibold mb-3 text-blue-800">📊 Import/Export Gebruikers</h4>
                             <div className="flex flex-wrap gap-2">
@@ -3093,506 +3100,4 @@ ${new Date().toLocaleString("nl-NL")}
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Input
-                          type="text"
-                          placeholder="Product naam"
-                          value={newProductName}
-                          onChange={(e) => setNewProductName(e.target.value)}
-                        />
-                        <div className="flex gap-2">
-                          <Input
-                            type="text"
-                            placeholder="QR Code (optioneel)"
-                            value={newProductQrCode}
-                            onChange={(e) => setNewProductQrCode(e.target.value)}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              setQrScanMode("product-management")
-                              startQrScanner()
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700"
-                            disabled={showQrScanner}
-                          >
-                            <QrCode className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <Select value={newProductCategory} onValueChange={setNewProductCategory}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecteer categorie" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Geen categorie</SelectItem>
-                            {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button onClick={addNewProduct} disabled={!newProductName.trim()}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Product Toevoegen
-                        </Button>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <div>
-                          <input
-                            type="file"
-                            accept=".csv,.txt"
-                            onChange={handleImportExcel}
-                            className="hidden"
-                            id="csv-import"
-                          />
-                          <Button
-                            variant="outline"
-                            onClick={() => document.getElementById("csv-import")?.click()}
-                            className="flex items-center gap-2"
-                          >
-                            📥 Import CSV
-                          </Button>
-                        </div>
-                        <Button
-                          variant="outline"
-                          onClick={handleExportExcel}
-                          className="flex items-center gap-2 bg-transparent"
-                        >
-                          📤 Export CSV
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={printAllQRCodes}
-                          className="flex items-center gap-2 bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
-                        >
-                          <Printer className="w-4 h-4" />
-                          Print Alle QR Codes
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={exportQRCodesForLabelPrinter}
-                          className="flex items-center gap-2 bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
-                        >
-                          🏷️ Export voor Labelprinter
-                        </Button>
-                      </div>
-
-                      <div className="mb-4">
-                        <div className="relative max-w-sm">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                          <Input
-                            placeholder="Zoek producten..."
-                            value={productSearchFilter}
-                            onChange={(e) => setProductSearchFilter(e.target.value)}
-                            className="pl-10"
-                          />
-                        </div>
-                      </div>
-
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Naam</TableHead>
-                            <TableHead>Categorie</TableHead>
-                            <TableHead>QR Code</TableHead>
-                            <TableHead>Bijlage</TableHead>
-                            <TableHead className="text-right">Acties</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {products
-                            .filter((product) => {
-                              if (!productSearchFilter) return true
-                              const searchLower = productSearchFilter.toLowerCase()
-                              const categoryName = product.categoryId
-                                ? categories.find((c) => c.id === product.categoryId)?.name || ""
-                                : ""
-
-                              return (
-                                product.name.toLowerCase().includes(searchLower) ||
-                                (product.qrcode && product.qrcode.toLowerCase().includes(searchLower)) ||
-                                categoryName.toLowerCase().includes(searchLower)
-                              )
-                            })
-                            .map((product) => (
-                              <TableRow key={product.id}>
-                                <TableCell className="font-medium">{product.name}</TableCell>
-                                <TableCell>
-                                  {product.categoryId
-                                    ? categories.find((c) => c.id === product.categoryId)?.name || "Onbekende categorie"
-                                    : "Geen categorie"}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    {product.qrcode ? (
-                                      <>
-                                        <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                                          {product.qrcode}
-                                        </span>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => printQRCode(product)}
-                                          className="text-xs bg-green-50 text-green-600 border-green-200 hover:bg-green-100 h-6 px-2"
-                                        >
-                                          <Printer className="h-3 w-3 mr-1" />
-                                          Print
-                                        </Button>
-                                      </>
-                                    ) : (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => generateQRCode(product)}
-                                        className="text-xs"
-                                      >
-                                        📱 Genereer QR
-                                      </Button>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    {product.attachmentUrl ? (
-                                      <div className="flex items-center gap-2">
-                                        <a
-                                          href={product.attachmentUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-blue-600 hover:text-blue-800 text-sm"
-                                        >
-                                          📎 {product.attachmentName || "Bijlage"}
-                                        </a>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleRemoveAttachment(product)}
-                                          className="text-red-600 hover:text-red-800 p-1"
-                                        >
-                                          <X className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <div>
-                                        <input
-                                          type="file"
-                                          accept=".pdf"
-                                          onChange={(e) => handleAttachmentUpload(product, e)}
-                                          className="hidden"
-                                          id={`file-${product.id}`}
-                                        />
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => document.getElementById(`file-${product.id}`)?.click()}
-                                          className="text-xs"
-                                        >
-                                          📎 PDF toevoegen
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex items-center justify-end gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={() => handleEditProduct(product)}
-                                      className="bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="destructive"
-                                      size="icon"
-                                      onClick={() => removeProduct(product)}
-                                      className="bg-red-500 hover:bg-red-600"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="categories">
-                <Card className="shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
-                    <CardTitle className="flex items-center gap-2 text-xl">🗂️ Categorieën Beheren</CardTitle>
-                    <CardDescription>Organiseer producten in categorieën</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex gap-4">
-                        <Input
-                          type="text"
-                          placeholder="Categorie naam"
-                          value={newCategoryName}
-                          onChange={(e) => setNewCategoryName(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && addNewCategory()}
-                        />
-                        <Button onClick={addNewCategory} disabled={!newCategoryName.trim()}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Categorie Toevoegen
-                        </Button>
-                      </div>
-
-                      <div className="space-y-2">
-                        {categories.map((category) => (
-                          <div
-                            key={category.id}
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
-                          >
-                            <div className="flex-1">
-                              <div className="font-medium">{category.name}</div>
-                              <div className="text-sm text-gray-600">
-                                {products.filter((p) => p.categoryId === category.id).length} producten
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditCategory(category)}
-                                className="bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeCategory(category)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="locations">
-                <Card className="shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b">
-                    <CardTitle className="flex items-center gap-2 text-xl">📍 Locaties Beheren</CardTitle>
-                    <CardDescription>Beheer beschikbare locaties voor product registratie</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex gap-4">
-                        <Input
-                          type="text"
-                          placeholder="Locatie naam"
-                          value={newLocationName}
-                          onChange={(e) => setNewLocationName(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && addNewLocation()}
-                        />
-                        <Button onClick={addNewLocation} disabled={!newLocationName.trim()}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Locatie Toevoegen
-                        </Button>
-                      </div>
-
-                      <div className="space-y-2">
-                        {locations.map((location) => (
-                          <div
-                            key={location}
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
-                          >
-                            <div className="flex-1">
-                              <div className="font-medium">{location}</div>
-                              <div className="text-sm text-gray-600">
-                                {registrations.filter((r) => r.location === location).length} registraties
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditLocation(location)}
-                                className="bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeLocation(location)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="purposes">
-                <Card className="shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 border-b">
-                    <CardTitle className="flex items-center gap-2 text-xl">🎯 Doelen Beheren</CardTitle>
-                    <CardDescription>Beheer beschikbare doelen voor product gebruik</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex gap-4">
-                        <Input
-                          type="text"
-                          placeholder="Doel naam"
-                          value={newPurposeName}
-                          onChange={(e) => setNewPurposeName(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && addNewPurpose()}
-                        />
-                        <Button onClick={addNewPurpose} disabled={!newPurposeName.trim()}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Doel Toevoegen
-                        </Button>
-                      </div>
-
-                      <div className="space-y-2">
-                        {purposes.map((purpose) => (
-                          <div
-                            key={purpose}
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
-                          >
-                            <div className="flex-1">
-                              <div className="font-medium">{purpose}</div>
-                              <div className="text-sm text-gray-600">
-                                {registrations.filter((r) => r.purpose === purpose).length} registraties
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditPurpose(purpose)}
-                                className="bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removePurpose(purpose)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="statistics">
-                <div className="space-y-6">
-                  <Card className="shadow-sm">
-                    <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b">
-                      <CardTitle className="flex items-center gap-2 text-xl">📊 Statistieken</CardTitle>
-                      <CardDescription>Overzicht van product registraties en gebruik</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                          <div className="text-2xl font-bold text-blue-600">{registrations.length}</div>
-                          <div className="text-blue-800 font-medium">Totaal Registraties</div>
-                        </div>
-                        <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
-                          <div className="text-2xl font-bold text-purple-600">{users.length}</div>
-                          <div className="text-purple-800 font-medium">Totaal Gebruikers</div>
-                        </div>
-                        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-                          <div className="text-2xl font-bold text-green-600">{products.length}</div>
-                          <div className="text-green-800 font-medium">Totaal Producten</div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="bg-white p-4 rounded-lg shadow border">
-                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🏆 Top Gebruikers</h3>
-                          <div className="space-y-2">
-                            {getTopUsers().map(([user, count]) => (
-                              <div key={user} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
-                                    🥇
-                                  </div>
-                                  <span className="text-sm font-medium">{user}</span>
-                                </div>
-                                <span className="text-sm text-gray-600">{count}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="bg-white p-4 rounded-lg shadow border">
-                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📍 Top Locaties</h3>
-                          <div className="space-y-2">
-                            {getTopLocations().map(([location, count]) => (
-                              <div key={location} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">
-                                    🥇
-                                  </div>
-                                  <span className="text-sm font-medium truncate">{location}</span>
-                                </div>
-                                <span className="text-sm text-gray-600">{count}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="bg-white p-4 rounded-lg shadow border">
-                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📊 Top 5 Producten</h3>
-                          <div className="space-y-3">
-                            {getProductChartData().map((item, index) => (
-                              <div key={item.product} className="space-y-1">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="font-medium truncate flex-1 mr-2">{item.product}</span>
-                                  <span className="text-gray-600 font-medium">{item.count}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="h-2 rounded-full transition-all duration-300"
-                                    style={{
-                                      backgroundColor: item.color,
-                                      width: `${(item.count / Math.max(...getProductChartData().map((d) => d.count))) * 100}%`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
-      </div>
-    </div>
-  )
-}
+                      <div className=\"grid grid-cols\
