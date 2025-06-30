@@ -188,122 +188,145 @@ export default function ProductRegistrationApp() {
   const [badgeId, setBadgeId] = useState("")
   const [badgeError, setBadgeError] = useState("")
 
-  // Add these import/export functions before the existing functions
+  // FIXED: Import/Export functions with proper XLSX handling
   const handleImportUsersExcel = async (e: any) => {
     const file = e.target.files[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = async (event: any) => {
-      try {
-        const data = new Uint8Array(event.target.result)
+    setIsLoading(true)
+    setImportMessage("📥 Bezig met lezen van Excel bestand...")
 
-        // Simple Excel parsing for .xlsx files
-        const workbook = await import("xlsx").then((XLSX) => XLSX.read(data, { type: "array" }))
-        const sheetName = workbook.SheetNames[0]
-        const worksheet = workbook.Sheets[sheetName]
-        const jsonData = await import("xlsx").then((XLSX) => XLSX.utils.sheet_to_json(worksheet))
+    try {
+      // Dynamic import of xlsx library
+      const XLSX = await import("xlsx")
 
-        if (jsonData.length === 0) {
-          setImportError("Excel bestand is leeg")
-          setTimeout(() => setImportError(""), 3000)
-          return
-        }
+      const reader = new FileReader()
+      reader.onload = async (event: any) => {
+        try {
+          const data = new Uint8Array(event.target.result)
+          const workbook = XLSX.read(data, { type: "array" })
+          const sheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[sheetName]
+          const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
-        let successCount = 0
-        let errorCount = 0
+          console.log("📋 Parsed Excel data:", jsonData)
 
-        for (const row of jsonData) {
-          const userData = {
-            name: row["Naam"]?.toString()?.trim(),
-            email: row["Email"]?.toString()?.trim(),
-            password: row["Wachtwoord"]?.toString()?.trim(),
-            level: row["Niveau"]?.toString()?.trim() || "user",
-            badgeCode: row["Badge Code"]?.toString()?.trim() || "",
+          if (jsonData.length === 0) {
+            setImportError("Excel bestand is leeg")
+            setTimeout(() => setImportError(""), 3000)
+            setIsLoading(false)
+            return
           }
 
-          // Validation
-          if (!userData.name || !userData.email || !userData.password) {
-            console.log(`Skipping row - missing required fields:`, userData)
-            errorCount++
-            continue
-          }
+          let successCount = 0
+          let errorCount = 0
 
-          if (userData.password.length < 6) {
-            console.log(`Skipping row - password too short:`, userData.name)
-            errorCount++
-            continue
-          }
+          for (const row of jsonData) {
+            const userData = {
+              name: row["Naam"]?.toString()?.trim(),
+              email: row["Email"]?.toString()?.trim(),
+              password: row["Wachtwoord"]?.toString()?.trim(),
+              level: row["Niveau"]?.toString()?.trim() || "user",
+              badgeCode: row["Badge Code"]?.toString()?.trim() || "",
+            }
 
-          // Check if user already exists
-          const existingUser = users.find((u) => u.name === userData.name)
-          if (existingUser) {
-            console.log(`Skipping row - user already exists:`, userData.name)
-            errorCount++
-            continue
-          }
+            console.log("👤 Processing user:", userData)
 
-          try {
-            setImportMessage(`Bezig met aanmaken gebruiker: ${userData.name}...`)
-
-            const result = await createAuthUser(userData.email, userData.password, userData.name, userData.level)
-
-            if (result.error) {
-              console.error(`Error creating user ${userData.name}:`, result.error)
+            // Validation
+            if (!userData.name || !userData.email || !userData.password) {
+              console.log(`❌ Skipping row - missing required fields:`, userData)
               errorCount++
               continue
             }
 
-            // Save badge code if provided
-            if (userData.badgeCode) {
-              const badgeResult = await saveBadgeCode(userData.badgeCode, userData.email, userData.name)
-              if (!badgeResult.success) {
-                console.warn(`User created but badge failed for ${userData.name}`)
-              }
+            if (userData.password.length < 6) {
+              console.log(`❌ Skipping row - password too short:`, userData.name)
+              errorCount++
+              continue
             }
 
-            successCount++
+            // Check if user already exists
+            const existingUser = users.find((u) => u.name === userData.name)
+            if (existingUser) {
+              console.log(`❌ Skipping row - user already exists:`, userData.name)
+              errorCount++
+              continue
+            }
 
-            // Small delay to prevent overwhelming the system
-            await new Promise((resolve) => setTimeout(resolve, 500))
-          } catch (error) {
-            console.error(`Exception creating user ${userData.name}:`, error)
-            errorCount++
+            try {
+              setImportMessage(`👤 Bezig met aanmaken gebruiker: ${userData.name}...`)
+
+              const result = await createAuthUser(userData.email, userData.password, userData.name, userData.level)
+
+              if (result.error) {
+                console.error(`❌ Error creating user ${userData.name}:`, result.error)
+                errorCount++
+                continue
+              }
+
+              // Save badge code if provided
+              if (userData.badgeCode) {
+                const badgeResult = await saveBadgeCode(userData.badgeCode, userData.email, userData.name)
+                if (!badgeResult.success) {
+                  console.warn(`⚠️ User created but badge failed for ${userData.name}`)
+                }
+              }
+
+              successCount++
+              console.log(`✅ Successfully created user: ${userData.name}`)
+
+              // Small delay to prevent overwhelming the system
+              await new Promise((resolve) => setTimeout(resolve, 500))
+            } catch (error) {
+              console.error(`❌ Exception creating user ${userData.name}:`, error)
+              errorCount++
+            }
           }
+
+          // Refresh users list
+          await refreshUsersWithBadges()
+
+          if (successCount > 0) {
+            setImportMessage(
+              `✅ ${successCount} gebruikers succesvol geïmporteerd!${errorCount > 0 ? ` (${errorCount} fouten)` : ""}`,
+            )
+          } else {
+            setImportError(`❌ Geen gebruikers geïmporteerd. ${errorCount} fouten gevonden.`)
+          }
+
+          setTimeout(() => {
+            setImportMessage("")
+            setImportError("")
+          }, 5000)
+        } catch (error) {
+          console.error("❌ Error parsing Excel file:", error)
+          setImportError("Fout bij lezen van Excel bestand. Zorg ervoor dat het een geldig .xlsx bestand is.")
+          setTimeout(() => setImportError(""), 5000)
+        } finally {
+          setIsLoading(false)
         }
-
-        // Refresh users list
-        await refreshUsersWithBadges()
-
-        if (successCount > 0) {
-          setImportMessage(
-            `✅ ${successCount} gebruikers succesvol geïmporteerd!${errorCount > 0 ? ` (${errorCount} fouten)` : ""}`,
-          )
-        } else {
-          setImportError(`❌ Geen gebruikers geïmporteerd. ${errorCount} fouten gevonden.`)
-        }
-
-        setTimeout(() => {
-          setImportMessage("")
-          setImportError("")
-        }, 5000)
-      } catch (error) {
-        console.error("Error parsing Excel file:", error)
-        setImportError("Fout bij lezen van Excel bestand. Zorg ervoor dat het een geldig .xlsx bestand is.")
-        setTimeout(() => setImportError(""), 5000)
       }
-    }
 
-    reader.onerror = () => {
-      setImportError("Fout bij lezen van bestand")
+      reader.onerror = () => {
+        setImportError("Fout bij lezen van bestand")
+        setTimeout(() => setImportError(""), 3000)
+        setIsLoading(false)
+      }
+
+      reader.readAsArrayBuffer(file)
+    } catch (error) {
+      console.error("❌ Error importing Excel:", error)
+      setImportError("Fout bij importeren van Excel bestand")
       setTimeout(() => setImportError(""), 3000)
+      setIsLoading(false)
     }
-
-    reader.readAsArrayBuffer(file)
   }
 
   const handleExportUsersExcel = async () => {
     try {
+      setImportMessage("📤 Bezig met exporteren naar Excel...")
+
+      // Dynamic import of xlsx library
       const XLSX = await import("xlsx")
 
       // Prepare data for export
@@ -314,6 +337,8 @@ export default function ProductRegistrationApp() {
         Niveau: user.role,
         "Badge Code": user.badgeCode || "",
       }))
+
+      console.log("📤 Export data prepared:", exportData)
 
       // Create workbook and worksheet
       const workbook = XLSX.utils.book_new()
@@ -338,7 +363,7 @@ export default function ProductRegistrationApp() {
       setImportMessage("✅ Gebruikers geëxporteerd naar Excel!")
       setTimeout(() => setImportMessage(""), 3000)
     } catch (error) {
-      console.error("Error exporting to Excel:", error)
+      console.error("❌ Error exporting to Excel:", error)
       setImportError("Fout bij exporteren naar Excel")
       setTimeout(() => setImportError(""), 3000)
     }
@@ -346,6 +371,9 @@ export default function ProductRegistrationApp() {
 
   const downloadUserTemplate = async () => {
     try {
+      setImportMessage("📄 Bezig met maken van template...")
+
+      // Dynamic import of xlsx library
       const XLSX = await import("xlsx")
 
       // Create template with headers and example data
@@ -365,6 +393,8 @@ export default function ProductRegistrationApp() {
           "Badge Code": "BADGE002",
         },
       ]
+
+      console.log("📄 Template data prepared:", templateData)
 
       // Create workbook and worksheet
       const workbook = XLSX.utils.book_new()
@@ -389,7 +419,7 @@ export default function ProductRegistrationApp() {
       setImportMessage("✅ Template gedownload!")
       setTimeout(() => setImportMessage(""), 3000)
     } catch (error) {
-      console.error("Error creating template:", error)
+      console.error("❌ Error creating template:", error)
       setImportError("Fout bij maken van template")
       setTimeout(() => setImportError(""), 3000)
     }
@@ -2532,6 +2562,7 @@ export default function ProductRegistrationApp() {
                                 variant="outline"
                                 onClick={downloadUserTemplate}
                                 className="flex items-center gap-2 bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                                disabled={isLoading}
                               >
                                 📄 Download Template
                               </Button>
@@ -2556,6 +2587,7 @@ export default function ProductRegistrationApp() {
                                 variant="outline"
                                 onClick={handleExportUsersExcel}
                                 className="flex items-center gap-2 bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
+                                disabled={isLoading}
                               >
                                 📤 Export Excel
                               </Button>
@@ -3144,16 +3176,16 @@ export default function ProductRegistrationApp() {
 
               <TabsContent value="purposes">
                 <Card className="shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 border-b">
+                  <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
                     <CardTitle className="flex items-center gap-2 text-xl">🎯 Doelen Beheer</CardTitle>
-                    <CardDescription>Beheer beschikbare doelen voor product registratie</CardDescription>
+                    <CardDescription>Beheer beschikbare doelen voor product gebruik</CardDescription>
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="space-y-6">
                       <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1">
                           <Input
-                            placeholder="Nieuw doel naam"
+                            placeholder="Nieuw doel"
                             value={newPurposeName}
                             onChange={(e) => setNewPurposeName(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && addNewPurpose()}
@@ -3211,94 +3243,58 @@ export default function ProductRegistrationApp() {
 
               <TabsContent value="statistics">
                 <div className="space-y-6">
-                  <Card className="shadow-sm">
-                    <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b">
-                      <CardTitle className="flex items-center gap-2 text-xl">📊 Statistieken</CardTitle>
-                      <CardDescription>Overzicht van product registraties</CardDescription>
-                    </CardHeader>
-                  </Card>
-
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card className="shadow-sm">
+                      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                        <CardTitle className="text-lg">📊 Totaal Registraties</CardTitle>
+                      </CardHeader>
                       <CardContent className="p-6">
-                        <div className="text-2xl font-bold text-gray-900 mb-2">Totaal Registraties</div>
-                        <div className="text-4xl font-bold text-blue-600">{registrations.length}</div>
+                        <div className="text-3xl font-bold text-blue-600">{registrations.length}</div>
+                        <p className="text-sm text-gray-600 mt-1">Alle product registraties</p>
                       </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
+                      <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
+                        <CardTitle className="text-lg">👥 Unieke Gebruikers</CardTitle>
+                      </CardHeader>
                       <CardContent className="p-6">
-                        <div className="text-2xl font-bold text-gray-900 mb-2">Unieke Gebruikers</div>
-                        <div className="text-4xl font-bold text-green-600">
+                        <div className="text-3xl font-bold text-green-600">
                           {new Set(registrations.map((r) => r.user)).size}
                         </div>
+                        <p className="text-sm text-gray-600 mt-1">Actieve gebruikers</p>
                       </CardContent>
                     </Card>
 
                     <Card className="shadow-sm">
+                      <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b">
+                        <CardTitle className="text-lg">📦 Unieke Producten</CardTitle>
+                      </CardHeader>
                       <CardContent className="p-6">
-                        <div className="text-2xl font-bold text-gray-900 mb-2">Unieke Producten</div>
-                        <div className="text-4xl font-bold text-purple-600">
+                        <div className="text-3xl font-bold text-amber-600">
                           {new Set(registrations.map((r) => r.product)).size}
                         </div>
+                        <p className="text-sm text-gray-600 mt-1">Geregistreerde producten</p>
                       </CardContent>
                     </Card>
                   </div>
 
-                  <Card className="shadow-sm">
-                    <CardHeader className="bg-gray-50 border-b">
-                      <CardTitle className="text-xl">Recente Activiteit</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Datum</TableHead>
-                              <TableHead>Gebruiker</TableHead>
-                              <TableHead>Product</TableHead>
-                              <TableHead>Locatie</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {registrations
-                              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                              .slice(0, 10)
-                              .map((registration) => (
-                                <TableRow key={registration.id}>
-                                  <TableCell>
-                                    {new Date(registration.timestamp).toLocaleDateString("nl-NL")}{" "}
-                                    {new Date(registration.timestamp).toLocaleTimeString("nl-NL", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </TableCell>
-                                  <TableCell className="font-medium">{registration.user}</TableCell>
-                                  <TableCell>{registration.product}</TableCell>
-                                  <TableCell>{registration.location}</TableCell>
-                                </TableRow>
-                              ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card className="shadow-sm">
-                      <CardHeader className="bg-gray-50 border-b">
-                        <CardTitle className="text-lg">Top 5 Gebruikers</CardTitle>
+                      <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
+                        <CardTitle className="text-lg">🏆 Top 5 Gebruikers</CardTitle>
                       </CardHeader>
                       <CardContent className="p-6">
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4 text-sm font-medium text-gray-600 border-b pb-2">
-                            <div>Gebruiker</div>
-                            <div className="text-right">Aantal</div>
-                          </div>
-                          {getTopUsers().map(([user, count]) => (
-                            <div key={user} className="grid grid-cols-2 gap-4 text-sm">
-                              <div className="font-medium">{user}</div>
-                              <div className="text-right font-bold">{count}</div>
+                        <div className="space-y-3">
+                          {getTopUsers().map(([user, count], index) => (
+                            <div key={user} className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-sm font-bold flex items-center justify-center">
+                                  {index + 1}
+                                </div>
+                                <span className="font-medium">{user}</span>
+                              </div>
+                              <span className="text-purple-600 font-bold">{count}</span>
                             </div>
                           ))}
                         </div>
@@ -3306,19 +3302,20 @@ export default function ProductRegistrationApp() {
                     </Card>
 
                     <Card className="shadow-sm">
-                      <CardHeader className="bg-gray-50 border-b">
-                        <CardTitle className="text-lg">Top 5 Producten</CardTitle>
+                      <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b">
+                        <CardTitle className="text-lg">📦 Top 5 Producten</CardTitle>
                       </CardHeader>
                       <CardContent className="p-6">
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4 text-sm font-medium text-gray-600 border-b pb-2">
-                            <div>Product</div>
-                            <div className="text-right">Aantal</div>
-                          </div>
-                          {getTopProducts().map(([product, count]) => (
-                            <div key={product} className="grid grid-cols-2 gap-4 text-sm">
-                              <div className="font-medium">{product}</div>
-                              <div className="text-right font-bold">{count}</div>
+                        <div className="space-y-3">
+                          {getTopProducts().map(([product, count], index) => (
+                            <div key={product} className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full bg-teal-100 text-teal-600 text-sm font-bold flex items-center justify-center">
+                                  {index + 1}
+                                </div>
+                                <span className="font-medium text-sm">{product}</span>
+                              </div>
+                              <span className="text-teal-600 font-bold">{count}</span>
                             </div>
                           ))}
                         </div>
@@ -3326,19 +3323,20 @@ export default function ProductRegistrationApp() {
                     </Card>
 
                     <Card className="shadow-sm">
-                      <CardHeader className="bg-gray-50 border-b">
-                        <CardTitle className="text-lg">Top 5 Locaties</CardTitle>
+                      <CardHeader className="bg-gradient-to-r from-rose-50 to-red-50 border-b">
+                        <CardTitle className="text-lg">📍 Top 5 Locaties</CardTitle>
                       </CardHeader>
                       <CardContent className="p-6">
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4 text-sm font-medium text-gray-600 border-b pb-2">
-                            <div>Locatie</div>
-                            <div className="text-right">Aantal</div>
-                          </div>
-                          {getTopLocations().map(([location, count]) => (
-                            <div key={location} className="grid grid-cols-2 gap-4 text-sm">
-                              <div className="font-medium">{location}</div>
-                              <div className="text-right font-bold">{count}</div>
+                        <div className="space-y-3">
+                          {getTopLocations().map(([location, count], index) => (
+                            <div key={location} className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-sm font-bold flex items-center justify-center">
+                                  {index + 1}
+                                </div>
+                                <span className="font-medium">{location}</span>
+                              </div>
+                              <span className="text-rose-600 font-bold">{count}</span>
                             </div>
                           ))}
                         </div>
@@ -3346,23 +3344,23 @@ export default function ProductRegistrationApp() {
                     </Card>
 
                     <Card className="shadow-sm">
-                      <CardHeader className="bg-gray-50 border-b">
-                        <CardTitle className="text-lg">Product Verdeling</CardTitle>
+                      <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b">
+                        <CardTitle className="text-lg">📊 Product Verdeling</CardTitle>
                       </CardHeader>
                       <CardContent className="p-6">
-                        <div className="space-y-4">
-                          {getProductChartData().map((item) => (
-                            <div key={item.product} className="space-y-2">
+                        <div className="space-y-3">
+                          {getProductChartData().map(({ product, count, color }) => (
+                            <div key={product} className="space-y-2">
                               <div className="flex justify-between text-sm">
-                                <span className="font-medium">{item.product}</span>
-                                <span className="font-bold">{item.count}</span>
+                                <span className="font-medium truncate">{product}</span>
+                                <span className="font-bold">{count}</span>
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div
                                   className="h-2 rounded-full"
                                   style={{
-                                    backgroundColor: item.color,
-                                    width: `${(item.count / Math.max(...getProductChartData().map((d) => d.count))) * 100}%`,
+                                    backgroundColor: color,
+                                    width: `${(count / Math.max(...getProductChartData().map((d) => d.count))) * 100}%`,
                                   }}
                                 />
                               </div>
@@ -3383,7 +3381,7 @@ export default function ProductRegistrationApp() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Gebruiker Bewerken</DialogTitle>
-              <DialogDescription>Wijzig de gebruikersgegevens en badge informatie</DialogDescription>
+              <DialogDescription>Wijzig de gebruikersgegevens en badge code</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -3398,7 +3396,7 @@ export default function ProductRegistrationApp() {
                 <Label>Rol</Label>
                 <Select value={editingUserRole} onValueChange={setEditingUserRole}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecteer rol" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>
@@ -3413,7 +3411,6 @@ export default function ProductRegistrationApp() {
                   onChange={(e) => setEditingUserBadgeCode(e.target.value)}
                   placeholder="Badge ID (optioneel)"
                 />
-                <div className="text-xs text-gray-500 mt-1">Laat leeg om badge te verwijderen</div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowEditUserDialog(false)}>
@@ -3459,7 +3456,7 @@ export default function ProductRegistrationApp() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecteer categorie" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Geen categorie</SelectItem>
@@ -3519,7 +3516,11 @@ export default function ProductRegistrationApp() {
             <div className="space-y-4">
               <div>
                 <Label>Naam</Label>
-                <Input value={editingLocation} onChange={(e) => setEditingLocation(e.target.value)} />
+                <Input
+                  value={editingLocation}
+                  onChange={(e) => setEditingLocation(e.target.value)}
+                  placeholder="Locatienaam"
+                />
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowEditLocationDialog(false)}>
@@ -3536,12 +3537,16 @@ export default function ProductRegistrationApp() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Doel Bewerken</DialogTitle>
-              <DialogDescription>Wijzig de doelnaam</DialogDescription>
+              <DialogDescription>Wijzig het doel</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label>Naam</Label>
-                <Input value={editingPurpose} onChange={(e) => setEditingPurpose(e.target.value)} />
+                <Input
+                  value={editingPurpose}
+                  onChange={(e) => setEditingPurpose(e.target.value)}
+                  placeholder="Doel naam"
+                />
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowEditPurposeDialog(false)}>
@@ -3552,6 +3557,52 @@ export default function ProductRegistrationApp() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* QR Scanner Modal */}
+        {showQrScanner && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">QR Code Scanner</h3>
+                <Button variant="ghost" size="sm" onClick={stopQrScanner}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">📱</div>
+                  <p className="text-gray-600 mb-4">Scan een QR code of voer handmatig in</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>QR Code</Label>
+                  <Input
+                    placeholder="Scan of typ QR code..."
+                    value={qrScanResult}
+                    onChange={(e) => setQrScanResult(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && qrScanResult.trim()) {
+                        handleQrCodeDetected(qrScanResult.trim())
+                      }
+                    }}
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => qrScanResult.trim() && handleQrCodeDetected(qrScanResult.trim())}
+                    disabled={!qrScanResult.trim()}
+                    className="flex-1"
+                  >
+                    ✅ Bevestigen
+                  </Button>
+                  <Button variant="outline" onClick={stopQrScanner} className="flex-1 bg-transparent">
+                    ❌ Annuleren
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
