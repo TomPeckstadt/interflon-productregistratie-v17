@@ -3512,22 +3512,22 @@ ${new Date().toLocaleString("nl-NL")}
                       <CardDescription>Overzicht van product registraties en gebruik</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                         <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
                           <div className="text-2xl font-bold text-blue-600">{registrations.length}</div>
                           <div className="text-blue-800 font-medium">Totaal Registraties</div>
-                        </div>
-                        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-                          <div className="text-2xl font-bold text-green-600">{products.length}</div>
-                          <div className="text-green-800 font-medium">Totaal Producten</div>
                         </div>
                         <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
                           <div className="text-2xl font-bold text-purple-600">{users.length}</div>
                           <div className="text-purple-800 font-medium">Totaal Gebruikers</div>
                         </div>
+                        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+                          <div className="text-2xl font-bold text-green-600">{products.length}</div>
+                          <div className="text-green-800 font-medium">Totaal Producten</div>
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="bg-white p-4 rounded-lg shadow border">
                           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🏆 Top Gebruikers</h3>
                           <div className="space-y-2">
@@ -3538,23 +3538,6 @@ ${new Date().toLocaleString("nl-NL")}
                                     🥇
                                   </div>
                                   <span className="text-sm font-medium">{user}</span>
-                                </div>
-                                <span className="text-sm text-gray-600">{count}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="bg-white p-4 rounded-lg shadow border">
-                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📦 Top Producten</h3>
-                          <div className="space-y-2">
-                            {getTopProducts().map(([product, count]) => (
-                              <div key={product} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs font-medium text-green-600">
-                                    🥇
-                                  </div>
-                                  <span className="text-sm font-medium truncate">{product}</span>
                                 </div>
                                 <span className="text-sm text-gray-600">{count}</span>
                               </div>
