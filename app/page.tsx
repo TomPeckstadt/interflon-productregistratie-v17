@@ -188,6 +188,213 @@ export default function ProductRegistrationApp() {
   const [badgeId, setBadgeId] = useState("")
   const [badgeError, setBadgeError] = useState("")
 
+  // Add these import/export functions before the existing functions
+  const handleImportUsersExcel = async (e: any) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (event: any) => {
+      try {
+        const data = new Uint8Array(event.target.result)
+
+        // Simple Excel parsing for .xlsx files
+        const workbook = await import("xlsx").then((XLSX) => XLSX.read(data, { type: "array" }))
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        const jsonData = await import("xlsx").then((XLSX) => XLSX.utils.sheet_to_json(worksheet))
+
+        if (jsonData.length === 0) {
+          setImportError("Excel bestand is leeg")
+          setTimeout(() => setImportError(""), 3000)
+          return
+        }
+
+        let successCount = 0
+        let errorCount = 0
+
+        for (const row of jsonData) {
+          const userData = {
+            name: row["Naam"]?.toString()?.trim(),
+            email: row["Email"]?.toString()?.trim(),
+            password: row["Wachtwoord"]?.toString()?.trim(),
+            level: row["Niveau"]?.toString()?.trim() || "user",
+            badgeCode: row["Badge Code"]?.toString()?.trim() || "",
+          }
+
+          // Validation
+          if (!userData.name || !userData.email || !userData.password) {
+            console.log(`Skipping row - missing required fields:`, userData)
+            errorCount++
+            continue
+          }
+
+          if (userData.password.length < 6) {
+            console.log(`Skipping row - password too short:`, userData.name)
+            errorCount++
+            continue
+          }
+
+          // Check if user already exists
+          const existingUser = users.find((u) => u.name === userData.name)
+          if (existingUser) {
+            console.log(`Skipping row - user already exists:`, userData.name)
+            errorCount++
+            continue
+          }
+
+          try {
+            setImportMessage(`Bezig met aanmaken gebruiker: ${userData.name}...`)
+
+            const result = await createAuthUser(userData.email, userData.password, userData.name, userData.level)
+
+            if (result.error) {
+              console.error(`Error creating user ${userData.name}:`, result.error)
+              errorCount++
+              continue
+            }
+
+            // Save badge code if provided
+            if (userData.badgeCode) {
+              const badgeResult = await saveBadgeCode(userData.badgeCode, userData.email, userData.name)
+              if (!badgeResult.success) {
+                console.warn(`User created but badge failed for ${userData.name}`)
+              }
+            }
+
+            successCount++
+
+            // Small delay to prevent overwhelming the system
+            await new Promise((resolve) => setTimeout(resolve, 500))
+          } catch (error) {
+            console.error(`Exception creating user ${userData.name}:`, error)
+            errorCount++
+          }
+        }
+
+        // Refresh users list
+        await refreshUsersWithBadges()
+
+        if (successCount > 0) {
+          setImportMessage(
+            `✅ ${successCount} gebruikers succesvol geïmporteerd!${errorCount > 0 ? ` (${errorCount} fouten)` : ""}`,
+          )
+        } else {
+          setImportError(`❌ Geen gebruikers geïmporteerd. ${errorCount} fouten gevonden.`)
+        }
+
+        setTimeout(() => {
+          setImportMessage("")
+          setImportError("")
+        }, 5000)
+      } catch (error) {
+        console.error("Error parsing Excel file:", error)
+        setImportError("Fout bij lezen van Excel bestand. Zorg ervoor dat het een geldig .xlsx bestand is.")
+        setTimeout(() => setImportError(""), 5000)
+      }
+    }
+
+    reader.onerror = () => {
+      setImportError("Fout bij lezen van bestand")
+      setTimeout(() => setImportError(""), 3000)
+    }
+
+    reader.readAsArrayBuffer(file)
+  }
+
+  const handleExportUsersExcel = async () => {
+    try {
+      const XLSX = await import("xlsx")
+
+      // Prepare data for export
+      const exportData = users.map((user) => ({
+        Naam: user.name,
+        Email: `${user.name.toLowerCase().replace(/\s+/g, ".")}@dematic.com`,
+        Wachtwoord: "", // Empty for security
+        Niveau: user.role,
+        "Badge Code": user.badgeCode || "",
+      }))
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new()
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+
+      // Set column widths
+      const colWidths = [
+        { wch: 25 }, // Naam
+        { wch: 30 }, // Email
+        { wch: 15 }, // Wachtwoord
+        { wch: 10 }, // Niveau
+        { wch: 15 }, // Badge Code
+      ]
+      worksheet["!cols"] = colWidths
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Gebruikers")
+
+      // Generate Excel file and download
+      XLSX.writeFile(workbook, "gebruikers_export.xlsx")
+
+      setImportMessage("✅ Gebruikers geëxporteerd naar Excel!")
+      setTimeout(() => setImportMessage(""), 3000)
+    } catch (error) {
+      console.error("Error exporting to Excel:", error)
+      setImportError("Fout bij exporteren naar Excel")
+      setTimeout(() => setImportError(""), 3000)
+    }
+  }
+
+  const downloadUserTemplate = async () => {
+    try {
+      const XLSX = await import("xlsx")
+
+      // Create template with headers and example data
+      const templateData = [
+        {
+          Naam: "Jan Janssen",
+          Email: "jan.janssen@dematic.com",
+          Wachtwoord: "wachtwoord123",
+          Niveau: "user",
+          "Badge Code": "BADGE001",
+        },
+        {
+          Naam: "Marie Peeters",
+          Email: "marie.peeters@dematic.com",
+          Wachtwoord: "veiligwachtwoord",
+          Niveau: "admin",
+          "Badge Code": "BADGE002",
+        },
+      ]
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new()
+      const worksheet = XLSX.utils.json_to_sheet(templateData)
+
+      // Set column widths
+      const colWidths = [
+        { wch: 25 }, // Naam
+        { wch: 30 }, // Email
+        { wch: 20 }, // Wachtwoord
+        { wch: 10 }, // Niveau
+        { wch: 15 }, // Badge Code
+      ]
+      worksheet["!cols"] = colWidths
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Gebruikers Template")
+
+      // Generate Excel file and download
+      XLSX.writeFile(workbook, "gebruikers_template.xlsx")
+
+      setImportMessage("✅ Template gedownload!")
+      setTimeout(() => setImportMessage(""), 3000)
+    } catch (error) {
+      console.error("Error creating template:", error)
+      setImportError("Fout bij maken van template")
+      setTimeout(() => setImportError(""), 3000)
+    }
+  }
+
   // Helper function to load badge codes for users
   const loadUserBadges = async () => {
     if (!supabase) {
@@ -2316,6 +2523,51 @@ export default function ProductRegistrationApp() {
                       <Card className="border-2 border-dashed border-gray-200">
                         <CardContent className="p-4">
                           <h3 className="text-lg font-semibold mb-4">🆕 Nieuwe Gebruiker Toevoegen</h3>
+
+                          {/* Import/Export Section */}
+                          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 className="text-md font-semibold mb-3 text-blue-800">📊 Import/Export Gebruikers</h4>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={downloadUserTemplate}
+                                className="flex items-center gap-2 bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                              >
+                                📄 Download Template
+                              </Button>
+                              <div>
+                                <input
+                                  type="file"
+                                  accept=".xlsx,.xls"
+                                  onChange={handleImportUsersExcel}
+                                  className="hidden"
+                                  id="users-excel-import"
+                                />
+                                <Button
+                                  variant="outline"
+                                  onClick={() => document.getElementById("users-excel-import")?.click()}
+                                  className="flex items-center gap-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                                  disabled={isLoading}
+                                >
+                                  📥 Import Excel
+                                </Button>
+                              </div>
+                              <Button
+                                variant="outline"
+                                onClick={handleExportUsersExcel}
+                                className="flex items-center gap-2 bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
+                              >
+                                📤 Export Excel
+                              </Button>
+                            </div>
+                            <div className="mt-2 text-xs text-blue-600">
+                              <p>💡 Download eerst de template voor het juiste formaat</p>
+                              <p>📋 Kolommen: Naam | Email | Wachtwoord | Niveau (user/admin) | Badge Code</p>
+                              <p>🔒 Wachtwoord moet minimaal 6 tekens lang zijn</p>
+                            </div>
+                          </div>
+
+                          {/* Manual Entry Section */}
                           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <div>
                               <Label className="text-sm font-medium">Naam</Label>
