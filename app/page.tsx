@@ -1109,7 +1109,7 @@ export default function ProductRegistrationApp() {
     document.body.removeChild(a)
   }
 
-  const printAllQRCodes = () => {
+  const printAllQRCodes = async () => {
     const productsWithQRCodes = products.filter((p) => p.qrcode)
 
     if (productsWithQRCodes.length === 0) {
@@ -1117,25 +1117,131 @@ export default function ProductRegistrationApp() {
       return
     }
 
-    const printWindow = window.open("", "_blank")
-    if (!printWindow) {
-      alert("Popup blocker is actief. Sta popups toe om af te drukken.")
-      return
-    }
+    setImportMessage("📱 Bezig met genereren van alle QR codes...")
 
-    printWindow.document.write("<html><head><title>QR Codes</title></head><body>")
-    productsWithQRCodes.forEach((product) => {
-      printWindow.document.write(`
-          <div style="margin: 10px; text-align: center;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${product.qrcode}" alt="${product.name}" style="margin-bottom: 5px;">
-              <p>${product.name}</p>
-          </div>
-      `)
-    })
-    printWindow.document.write("</body></html>")
-    printWindow.document.close()
-    printWindow.print()
-    printWindow.onafterprint = () => printWindow.close()
+    try {
+      // Create a canvas for each product and download them
+      for (let i = 0; i < productsWithQRCodes.length; i++) {
+        const product = productsWithQRCodes[i]
+
+        // Create canvas for this product
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d")
+
+        // Set canvas size for A4-like proportions
+        canvas.width = 600
+        canvas.height = 800
+
+        if (ctx) {
+          // White background
+          ctx.fillStyle = "white"
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+          // Title
+          ctx.fillStyle = "black"
+          ctx.font = "bold 24px Arial"
+          ctx.textAlign = "center"
+          ctx.fillText("QR Code", canvas.width / 2, 60)
+
+          // Product name (with text wrapping)
+          ctx.font = "18px Arial"
+          const maxWidth = canvas.width - 40
+          const words = product.name.split(" ")
+          let line = ""
+          let y = 120
+
+          for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + " "
+            const metrics = ctx.measureText(testLine)
+            const testWidth = metrics.width
+
+            if (testWidth > maxWidth && n > 0) {
+              ctx.fillText(line, canvas.width / 2, y)
+              line = words[n] + " "
+              y += 25
+            } else {
+              line = testLine
+            }
+          }
+          ctx.fillText(line, canvas.width / 2, y)
+
+          // Create QR code image
+          const qrImg = new Image()
+          qrImg.crossOrigin = "anonymous"
+
+          await new Promise((resolve, reject) => {
+            qrImg.onload = () => {
+              // Draw QR code
+              const qrSize = 300
+              const qrX = (canvas.width - qrSize) / 2
+              const qrY = y + 40
+
+              ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+
+              // QR Code text
+              ctx.font = "14px Arial"
+              ctx.fillText(`QR Code: ${product.qrcode}`, canvas.width / 2, qrY + qrSize + 30)
+
+              // Date
+              const now = new Date()
+              ctx.font = "12px Arial"
+              ctx.fillText(now.toLocaleDateString("nl-NL"), canvas.width / 2, qrY + qrSize + 60)
+
+              // Convert to PNG and download
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement("a")
+                  a.href = url
+                  a.download = `QR_${product.name.replace(/[^a-zA-Z0-9]/g, "_")}_${i + 1}.png`
+                  document.body.appendChild(a)
+                  a.click()
+                  document.body.removeChild(a)
+                  URL.revokeObjectURL(url)
+                }
+                resolve(true)
+              }, "image/png")
+            }
+
+            qrImg.onerror = () => {
+              // Fallback: create simple text-based version
+              ctx.font = "16px Arial"
+              ctx.fillText("QR Code kon niet worden geladen", canvas.width / 2, y + 100)
+              ctx.fillText(`Code: ${product.qrcode}`, canvas.width / 2, y + 130)
+
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement("a")
+                  a.href = url
+                  a.download = `QR_${product.name.replace(/[^a-zA-Z0-9]/g, "_")}_${i + 1}.png`
+                  document.body.appendChild(a)
+                  a.click()
+                  document.body.removeChild(a)
+                  URL.revokeObjectURL(url)
+                }
+                resolve(true)
+              }, "image/png")
+            }
+
+            // Load QR code image
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(product.qrcode)}`
+          })
+
+          // Small delay between downloads to prevent overwhelming the browser
+          if (i < productsWithQRCodes.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 500))
+          }
+        }
+      }
+
+      setImportMessage(`✅ ${productsWithQRCodes.length} QR codes gedownload!`)
+      setTimeout(() => setImportMessage(""), 3000)
+    } catch (error) {
+      console.error("Error generating QR codes:", error)
+      setImportError("Fout bij genereren van QR codes")
+      setTimeout(() => setImportError(""), 3000)
+    }
   }
 
   const printQRCode = (product: Product) => {
