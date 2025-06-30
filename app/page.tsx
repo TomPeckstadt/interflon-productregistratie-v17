@@ -55,6 +55,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Trash2, Search, X, QrCode, ChevronDown, Edit, Printer, LogOut, Lock, Mail } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
 
 interface Product {
   id: string
@@ -325,9 +326,26 @@ export default function ProductRegistrationApp() {
     }
   }
 
+  const generateRandomPassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    let password = ""
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return password
+  }
+
   const handleExportUsersCSV = async () => {
     try {
       setImportMessage("📤 Bezig met exporteren naar CSV...")
+      if (
+        !confirm(
+          "⚠️ WAARSCHUWING: De CSV zal tijdelijke wachtwoorden bevatten (TempPass123). Gebruikers moeten deze wijzigen na import. Doorgaan?",
+        )
+      ) {
+        setIsLoading(false)
+        return
+      }
 
       // Prepare data for export
       const csvRows = []
@@ -341,7 +359,7 @@ export default function ProductRegistrationApp() {
         const row = [
           `"${user.name}"`,
           `"${email}"`,
-          '""', // Empty password for security
+          `"${generateRandomPassword()}"`, // Random generated password
           `"${user.role}"`,
           `"${user.badgeCode || ""}"`,
         ].join(",")
@@ -379,8 +397,8 @@ export default function ProductRegistrationApp() {
       // Create CSV template with headers and example data
       const csvRows = [
         'Naam,Email,Wachtwoord,Niveau,"Badge Code"',
-        '"Jan Janssen","jan.janssen@dematic.com","wachtwoord123","user","BADGE001"',
-        '"Marie Peeters","marie.peeters@dematic.com","veiligwachtwoord","admin","BADGE002"',
+        '"Jan Janssen","jan.janssen@dematic.com","nieuw_wachtwoord123","user","BADGE001"',
+        '"Marie Peeters","marie.peeters@dematic.com","veilig_wachtwoord456","admin","BADGE002"',
       ]
 
       const csvContent = csvRows.join("\n")
@@ -1153,27 +1171,38 @@ export default function ProductRegistrationApp() {
   }
 
   const generateQRCode = async (product: Product) => {
-    const newQrCode = `IF-${product.name.substring(0, 2)}-${Math.random().toString(36).substring(2, 7)}`
+    try {
+      // Generate long format QR code like the old ones
+      const productPrefix = product.name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .substring(0, 10)
 
-    const updateData = {
-      name: product.name,
-      qr_code: newQrCode,
-      category_id: product.categoryId ? Number.parseInt(product.categoryId) : null,
-      attachment_url: product.attachmentUrl || null,
-      attachment_name: product.attachmentName || null,
-    }
+      const randomNumber = Math.floor(100000 + Math.random() * 900000)
+      const qrCodeValue = `${productPrefix}_${randomNumber}`
 
-    const result = await updateProduct(product.id, updateData)
-    if (result.error) {
-      setImportError("Fout bij genereren QR code")
-      setTimeout(() => setImportError(""), 3000)
-    } else {
-      const refreshResult = await fetchProducts()
-      if (refreshResult.data) {
-        setProducts(refreshResult.data)
+      // Update the product in Supabase with the new QR code
+      const { error } = await supabase.from("products").update({ qr_code: qrCodeValue }).eq("id", product.id)
+
+      if (error) {
+        console.error("Error updating QR code in Supabase:", error)
+        throw error
       }
-      setImportMessage("✅ QR Code gegenereerd!")
-      setTimeout(() => setImportMessage(""), 2000)
+
+      // Update local state
+      setProducts(products.map((p) => (p.id === product.id ? { ...p, qr_code: qrCodeValue } : p)))
+
+      toast({
+        title: "QR Code Gegenereerd",
+        description: `QR code ${qrCodeValue} is aangemaakt en opgeslagen.`,
+      })
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+      toast({
+        title: "Fout",
+        description: "Er is een fout opgetreden bij het genereren van de QR code.",
+        variant: "destructive",
+      })
     }
   }
 
